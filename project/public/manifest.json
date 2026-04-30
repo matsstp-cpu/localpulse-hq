@@ -1,0 +1,76 @@
+{
+  "name": "LocalPulse TEAM HUB",
+  "short_name": "TEAM HUB",
+  "description": "PWA-панель команды LocalPulse TEAM HUB",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070A14",
+  "theme_color": "#070A14",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/localpulse-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/localpulse-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23000' width='540' height='720'/><rect fill='%233b82f6' width='540' height='40' opacity='0.1'/><text x='20' y='30' font-size='16' font-weight='bold' fill='%233b82f6' font-family='sans-serif'>PULSE</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Лента",
+      "short_name": "Лента",
+      "description": "Обновления и активность команды",
+      "url": "/",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23000' width='96' height='96'/><circle cx='48' cy='48' r='24' fill='%233b82f6'/></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Календарь",
+      "short_name": "Календарь",
+      "description": "Встречи и демонстрации",
+      "url": "/",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23000' width='96' height='96'/><rect x='24' y='24' width='48' height='48' fill='%233b82f6'/></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Команда",
+      "short_name": "Команда",
+      "description": "Профили участников",
+      "url": "/",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23000' width='96' height='96'/><circle cx='32' cy='30' r='12' fill='%233b82f6'/><circle cx='64' cy='30' r='12' fill='%233b82f6'/><circle cx='48' cy='60' r='12' fill='%233b82f6'/></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
