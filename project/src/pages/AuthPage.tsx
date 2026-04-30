@@ -26,18 +26,20 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Валидация: проверяем, что поля не пустые (фикс бага "Название не заполнено")
     if (mode === 'signup' && !fullName.trim()) {
       notify('Как нам к тебе обращаться? Введи имя!', 'error');
       return;
     }
 
     setLoading(true);
+    let keepLoading = false; // Флаг, чтобы не выключать спиннер при успехе
+
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) throw error;
         notify('Рады видеть! Загружаем твой дашборд...', 'success');
+        keepLoading = true; // Оставляем кнопку заблокированной до редиректа
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
@@ -46,7 +48,6 @@ export default function AuthPage() {
         setMode('login');
       }
     } catch (error: any) {
-      // Человечный UX для ошибок
       const techMsg = error.message?.toLowerCase() || '';
       let friendlyMessage = 'Ой, что-то пошло не так. Давай попробуем еще раз?';
       
@@ -55,18 +56,17 @@ export default function AuthPage() {
       } else if (techMsg.includes('already registered')) {
         friendlyMessage = 'Этот email уже с нами! Попробуй просто войти.';
       } else if (techMsg.includes('password should be')) {
-        friendlyMessage = 'Пароль слишком короткий. Нужно хотя бы 6 символов для безопасности.';
+        friendlyMessage = 'Пароль слишком короткий. Нужно хотя бы 6 символов.';
       }
       
       notify(friendlyMessage, 'error');
     } finally {
-      setLoading(false);
+      if (!keepLoading) setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Сетка фона с повышенным контрастом */}
       <div 
         className="fixed inset-0 opacity-[0.07]" 
         style={{ 
@@ -90,10 +90,10 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* Основная карточка входа */}
         <div className="glass-card rounded-3xl p-8 border border-white/10 shadow-2xl">
           <div className="flex p-1 bg-black/40 rounded-2xl mb-8 border border-white/5">
             <button
+              type="button"
               onClick={() => setMode('login')}
               className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
                 mode === 'login' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
@@ -102,6 +102,7 @@ export default function AuthPage() {
               Вход
             </button>
             <button
+              type="button"
               onClick={() => setMode('signup')}
               className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
                 mode === 'signup' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
@@ -117,9 +118,10 @@ export default function AuthPage() {
                 <label className="block text-[10px] text-blue-400/70 tracking-widest uppercase font-bold ml-1">Твое Имя</label>
                 <input
                   type="text"
+                  required
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
-                  placeholder="Анастасия"
+                  placeholder="Имя Фамилия"
                   className="w-full px-4 py-3.5 rounded-xl bg-black/50 border border-white/10 text-white focus:border-blue-500 outline-none transition-all"
                 />
               </div>
@@ -129,6 +131,7 @@ export default function AuthPage() {
               <label className="block text-[10px] text-blue-400/70 tracking-widest uppercase font-bold ml-1">Рабочая Почта</label>
               <input
                 type="email"
+                required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="office@localtrans.ru"
@@ -141,6 +144,7 @@ export default function AuthPage() {
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
+                  required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -184,7 +188,7 @@ export default function AuthPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-300 leading-relaxed">
-            Анастасия, аккаунт готов. Остался последний шаг — войди под своими данными, чтобы оживить систему.
+            Аккаунт готов. Остался последний шаг — войди под своими данными, чтобы оживить систему.
           </p>
           <button
             type="button"
