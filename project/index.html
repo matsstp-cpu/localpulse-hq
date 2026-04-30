@@ -10,7 +10,7 @@
     <title>LocalPulse TEAM HUB</title>
     <meta name="description" content="Cyber-Chic панель LocalPulse TEAM HUB: команда, лента, календарь." />
     
-    <!-- Иконки и Favicon (Исправление ошибки 404) -->
+    <!-- Иконки и Favicon -->
     <link rel="icon" type="image/svg+xml" href="/icons/localpulse-192.svg" />
     <link rel="apple-touch-icon" href="/icons/localpulse-192.svg" />
     <link rel="mask-icon" href="/icons/localpulse-192.svg" color="#3B82F6" />
@@ -25,18 +25,18 @@
     <meta name="twitter:title" content="LocalPulse TEAM HUB" />
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&fit=crop" />
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- PWA Manifest с исправлением ошибки 401 -->
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Регистрация Service Worker (если она не сделана в main.tsx) -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('SW registered'))
             .catch(err => console.log('SW registration failed:', err));
         });
       }
