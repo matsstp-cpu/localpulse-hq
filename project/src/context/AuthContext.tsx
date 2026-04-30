@@ -23,12 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
       if (error) throw error;
       setProfile(data);
     } catch (err) {
@@ -37,60 +32,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
-  };
-
   useEffect(() => {
     let mounted = true;
 
     async function initAuth() {
       try {
-        // 1. Пытаемся получить сессию
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("🚀 Начало проверки сессии...");
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) throw error;
 
         if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            await fetchProfile(session.user.id);
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          // Сначала убираем загрузку, чтобы пользователь увидел главный экран/вход
+          setLoading(false); 
+          
+          // Профиль грузим в фоне
+          if (currentSession?.user) {
+            fetchProfile(currentSession.user.id);
           }
         }
       } catch (err) {
-        console.error("Ошибка инициализации сессии:", err);
-      } finally {
-        // Гарантированный выход из загрузки даже при ошибке
+        console.error("❌ Ошибка инициализации:", err);
         if (mounted) setLoading(false);
       }
     }
 
     initAuth();
 
-    // 2. Слушаем изменения состояния
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log(`Auth Event: ${event}`);
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user.id);
-      } else {
-        setProfile(null);
-      }
-
-      setLoading(false); 
-    });
-
-    // Резервный таймаут: если через 5 секунд ничего не произошло, принудительно пускаем на вход
-    const backupTimeout = setTimeout(() => {
-      if (loading && mounted) {
-        console.warn("Инициализация заняла слишком много времени. Принудительный вход.");
+      if (mounted) {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        if (currentSession?.user) {
+          fetchProfile(currentSession.user.id);
+        } else {
+          setProfile(null);
+        }
         setLoading(false);
       }
-    }, 5000);
+    });
+
+    // Резервный таймаут сокращаем до 3 секунд — это максимум, который должен видеть пользователь
+    const backupTimeout = setTimeout(() => {
+      if (loading && mounted) {
+        console.warn("⚠️ Force start: таймаут инициализации.");
+        setLoading(false);
+      }
+    }, 3000);
 
     return () => {
       mounted = false;
@@ -99,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // ... (signIn, signUp, signOut оставляем как были)
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -131,6 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Ошибка выхода:", err);
     }
   };
+
+  const refreshProfile = async () => { if (user) await fetchProfile(user.id); };
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
