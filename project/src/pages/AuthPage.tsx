@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Zap, Eye, EyeOff } from 'lucide-react';
+import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 import AppToast, { type ToastTone } from '../components/ui/AppToast';
 import AppModal from '../components/ui/AppModal';
 
@@ -25,27 +25,39 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Валидация: проверяем, что поля не пустые (фикс бага "Название не заполнено")
+    if (mode === 'signup' && !fullName.trim()) {
+      notify('Как нам к тебе обращаться? Введи имя!', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        notify('Вход выполнен. Загружаем ваш TEAM HUB...', 'success');
+        notify('Рады видеть! Загружаем твой дашборд...', 'success');
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
         setIsWelcomeModalOpen(true);
-        notify('Аккаунт успешно создан', 'success');
+        notify('Добро пожаловать в команду!', 'success');
         setMode('login');
       }
-    } catch (error) {
-      const technical = error instanceof Error ? error.message : '';
-      const friendlyMessage =
-        technical.toLowerCase().includes('invalid login credentials')
-          ? 'Почта или пароль не совпадают. Проверьте данные и попробуйте снова.'
-          : technical.toLowerCase().includes('already registered')
-            ? 'Этот email уже зарегистрирован. Попробуйте войти в существующий аккаунт.'
-            : 'Не получилось завершить авторизацию. Попробуйте еще раз через минуту.';
+    } catch (error: any) {
+      // Человечный UX для ошибок
+      const techMsg = error.message?.toLowerCase() || '';
+      let friendlyMessage = 'Ой, что-то пошло не так. Давай попробуем еще раз?';
+      
+      if (techMsg.includes('invalid login')) {
+        friendlyMessage = 'Похоже, пароль или почта не те. Проверь еще разок!';
+      } else if (techMsg.includes('already registered')) {
+        friendlyMessage = 'Этот email уже с нами! Попробуй просто войти.';
+      } else if (techMsg.includes('password should be')) {
+        friendlyMessage = 'Пароль слишком короткий. Нужно хотя бы 6 символов для безопасности.';
+      }
+      
       notify(friendlyMessage, 'error');
     } finally {
       setLoading(false);
@@ -53,94 +65,93 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 scanline">
-      <div
-        className="fixed inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(59,130,246,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.5) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-        }}
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Сетка фона с повышенным контрастом */}
+      <div 
+        className="fixed inset-0 opacity-[0.07]" 
+        style={{ 
+          backgroundImage: 'linear-gradient(var(--cyber-blue) 1px, transparent 1px), linear-gradient(90deg, var(--cyber-blue) 1px, transparent 1px)',
+          backgroundSize: '40px 40px' 
+        }} 
       />
 
-      <div className="relative w-full max-w-sm">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 border border-blue-500 flex items-center justify-center glow-blue">
-              <Zap size={20} className="text-blue-400" fill="currentColor" />
+      <div className="relative w-full max-w-sm animate-slide-in">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 border-2 border-blue-500 rounded-xl flex items-center justify-center cyber-glow">
+              <Zap size={24} className="text-blue-400" fill="currentColor" />
             </div>
-            <span className="text-xl font-semibold tracking-[0.2em] text-white uppercase" style={{ fontFamily: 'Space Grotesk' }}>
-              Cyber<span className="text-blue-400">Chic</span>
-            </span>
+            <div className="text-left">
+              <span className="block text-2xl font-bold tracking-tighter text-white uppercase leading-none">
+                LOCAL<span className="text-blue-500">PULSE</span>
+              </span>
+              <span className="text-[10px] text-blue-400/80 tracking-[0.3em] uppercase font-medium">Bdm Management</span>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 tracking-widest uppercase">Панель команды LocalTrans</p>
         </div>
 
-        <div className="glass rounded-sm p-8" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="flex mb-8 border border-white/8" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        {/* Основная карточка входа */}
+        <div className="glass-card rounded-3xl p-8 border border-white/10 shadow-2xl">
+          <div className="flex p-1 bg-black/40 rounded-2xl mb-8 border border-white/5">
             <button
               onClick={() => setMode('login')}
-              className={`flex-1 py-2.5 text-xs tracking-widest uppercase font-medium transition-all ${
-                mode === 'login'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-500 hover:text-slate-300'
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+                mode === 'login' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               Вход
             </button>
             <button
               onClick={() => setMode('signup')}
-              className={`flex-1 py-2.5 text-xs tracking-widest uppercase font-medium transition-all ${
-                mode === 'signup'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-500 hover:text-slate-300'
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+                mode === 'signup' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               Регистрация
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {mode === 'signup' && (
-              <div>
-                <label className="block text-xs text-slate-500 tracking-widest uppercase mb-2">Имя</label>
+              <div className="space-y-2">
+                <label className="block text-[10px] text-blue-400/70 tracking-widest uppercase font-bold ml-1">Твое Имя</label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   placeholder="Анастасия"
-                  required
-                  className="w-full px-4 py-3 rounded-sm text-sm"
+                  className="w-full px-4 py-3.5 rounded-xl bg-black/50 border border-white/10 text-white focus:border-blue-500 outline-none transition-all"
                 />
               </div>
             )}
-            <div>
-              <label className="block text-xs text-slate-500 tracking-widest uppercase mb-2">Почта</label>
+            
+            <div className="space-y-2">
+              <label className="block text-[10px] text-blue-400/70 tracking-widest uppercase font-bold ml-1">Рабочая Почта</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@company.io"
-                required
-                className="w-full px-4 py-3 rounded-sm text-sm"
+                placeholder="office@localtrans.ru"
+                className="w-full px-4 py-3.5 rounded-xl bg-black/50 border border-white/10 text-white focus:border-blue-500 outline-none transition-all"
               />
             </div>
-            <div>
-              <label className="block text-xs text-slate-500 tracking-widest uppercase mb-2">Пароль</label>
+
+            <div className="space-y-2">
+              <label className="block text-[10px] text-blue-400/70 tracking-widest uppercase font-bold ml-1">Пароль</label>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  required
-                  className="w-full px-4 py-3 rounded-sm text-sm pr-12"
+                  className="w-full px-4 py-3.5 rounded-xl bg-black/50 border border-white/10 text-white focus:border-blue-500 outline-none transition-all pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
                 >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -148,37 +159,41 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs tracking-widest uppercase font-semibold rounded-sm transition-all mt-2 glow-blue disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white text-xs tracking-[0.2em] uppercase font-black rounded-xl transition-all mt-4 shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? 'Обработка...' : mode === 'login' ? 'Войти в систему' : 'Создать аккаунт'}
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Обработка...
+                </>
+              ) : mode === 'login' ? 'Войти в Hub' : 'Стать частью команды'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-slate-700 mt-6 tracking-wider">
-          LOCALPULSE CYBER-CHIC v1.0
+        <p className="text-center text-[10px] text-slate-600 mt-8 tracking-[0.4em] font-bold">
+          CORE INTERFACE v2.0 // EST. 2026
         </p>
       </div>
 
       <AppModal
         open={isWelcomeModalOpen}
-        title="Регистрация завершена"
-        subtitle="Мы рады видеть вас в LocalPulse TEAM HUB"
+        title="Ура, ты в деле!"
+        subtitle="Регистрация в LocalPulse прошла успешно"
         onClose={() => setIsWelcomeModalOpen(false)}
-        maxWidthClassName="max-w-md"
-        zIndexClassName="z-[85]"
       >
-        {/* Fixed: unified design-system modal for onboarding feedback */}
-        <p className="text-sm text-muted-foreground">
-          Аккаунт создан. Теперь войдите с почтой и паролем, чтобы открыть рабочее пространство команды.
-        </p>
-        <button
-          type="button"
-          onClick={() => setIsWelcomeModalOpen(false)}
-          className="mt-5 w-full rounded-lg border border-primary/40 bg-primary/20 px-3 py-2 text-sm text-primary transition hover:cyber-glow"
-        >
-          Перейти ко входу
-        </button>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Анастасия, аккаунт готов. Остался последний шаг — войди под своими данными, чтобы оживить систему.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsWelcomeModalOpen(false)}
+            className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-500 shadow-blue-500/20 shadow-lg transition-all"
+          >
+            К авторизации
+          </button>
+        </div>
       </AppModal>
 
       {toast && <AppToast message={toast.message} tone={toast.tone} />}
