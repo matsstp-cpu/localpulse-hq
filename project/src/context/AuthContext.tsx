@@ -22,12 +22,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    setProfile(data);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      setProfile(data);
+    } catch (err) {
+      console.error("Ошибка загрузки профиля:", err);
+      setProfile(null);
+    }
   };
 
   const refreshProfile = async () => {
@@ -35,49 +42,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // 1. Получаем начальную сессию при загрузке страницы
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // 2. Слушаем любые изменения: вход (SIGNED_IN), выход (SIGNED_OUT) и т.д.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    async function initAuth() {
+      try {
+        // 1. Пытаемся получить сессию
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
+        }
+      } catch (err) {
+        console.error("Ошибка инициализации сессии:", err);
+      } finally {
+        // Гарантированный выход из загрузки даже при ошибке
+        if (mounted) setLoading(false);
+      }
+    }
+
+    initAuth();
+
+    // 2. Слушаем изменения состояния
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log(`Auth Event: ${event}`);
       
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        await fetchProfile(currentSession.user.id);
       } else {
         setProfile(null);
       }
 
-      // ИСПРАВЛЕНИЕ: Гарантируем, что loading станет false после любого события
-      // Это предотвратит "зависание" экрана после нажатия кнопки "Войти"
       setLoading(false); 
     });
 
-    return () => subscription.unsubscribe();
+    // Резервный таймаут: если через 5 секунд ничего не произошло, принудительно пускаем на вход
+    const backupTimeout = setTimeout(() => {
+      if (loading && mounted) {
+        console.warn("Инициализация заняла слишком много времени. Принудительный вход.");
+        setLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(backupTimeout);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error as Error | null };
+    } catch (err: any) {
+      return { error: err };
+    }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    return { error: error as Error | null };
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      return { error: error as Error | null };
+    } catch (err: any) {
+      return { error: err };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+    } catch (err) {
+      console.error("Ошибка выхода:", err);
+    }
   };
 
   return (
