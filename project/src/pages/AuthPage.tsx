@@ -14,10 +14,11 @@ export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  // АВТО-РЕДИРЕКТ: Если пользователь уже залогинен, уходим со страницы авторизации
+  // Жесткий редирект: если пользователь авторизован, принудительно перекидываем на базу
   useEffect(() => {
     if (user) {
-      console.log("Пользователь найден, перенаправляем на главную...");
+      console.log("✅ Сессия подтверждена. Перенаправление...");
+      // Используем window.location.href как крайнюю меру, если обычный navigate блокируется SW
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
@@ -33,9 +34,16 @@ export default function AuthPage() {
         : await signUp(email, password, fullName);
 
       if (authError) throw authError;
-      // После успеха useEffect выше сработает автоматически
+      
+      // Если после логина navigate не сработал за 1 секунду, делаем жесткую перезагрузку
+      setTimeout(() => {
+        if (window.location.pathname === '/auth') {
+           window.location.href = '/';
+        }
+      }, 1000);
+
     } catch (err: any) {
-      setError(err.message || 'Произошла ошибка при входе');
+      setError(err.message || 'Ошибка синхронизации');
     } finally {
       setLoading(false);
     }
@@ -43,7 +51,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Фоновая сетка */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]"></div>
       
       <div className="w-full max-w-md z-10">
@@ -58,12 +65,14 @@ export default function AuthPage() {
         <div className="glass-card border border-primary/20 p-8 rounded-2xl shadow-2xl">
           <div className="flex gap-4 mb-8">
             <button 
+              type="button"
               onClick={() => setIsLogin(true)}
               className={`flex-1 pb-2 text-sm font-medium transition-all ${isLogin ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
             >
               ВХОД
             </button>
             <button 
+              type="button"
               onClick={() => setIsLogin(false)}
               className={`flex-1 pb-2 text-sm font-medium transition-all ${!isLogin ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
             >
@@ -74,7 +83,7 @@ export default function AuthPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-1">
-                <label className="text-[10px] uppercase text-muted-foreground ml-1">Ваше Имя</label>
+                <label className="text-[10px] uppercase text-muted-foreground ml-1 font-bold">Ваше Имя</label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input 
@@ -86,7 +95,7 @@ export default function AuthPage() {
             )}
 
             <div className="space-y-1">
-              <label className="text-[10px] uppercase text-muted-foreground ml-1">Рабочая почта</label>
+              <label className="text-[10px] uppercase text-muted-foreground ml-1 font-bold">Рабочая почта</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input 
@@ -97,7 +106,7 @@ export default function AuthPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] uppercase text-muted-foreground ml-1">Пароль</label>
+              <label className="text-[10px] uppercase text-muted-foreground ml-1 font-bold">Пароль</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input 
@@ -111,7 +120,7 @@ export default function AuthPage() {
 
             <button 
               disabled={loading}
-              className="w-full cyber-glow bg-primary text-primary-foreground font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50"
+              className="w-full cyber-glow bg-primary text-primary-foreground font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 mt-4"
             >
               {loading ? 'СИНХРОНИЗАЦИЯ...' : (isLogin ? 'ВОЙТИ В СИСТЕМУ' : 'СОЗДАТЬ АККАУНТ')}
               {!loading && <ArrowRight className="h-4 w-4" />}
