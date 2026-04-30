@@ -1,5 +1,5 @@
-const CACHE_NAME = 'localpulse-v2';
-const ASSETS = [
+const CACHE_NAME = 'localpulse-v2.1';
+const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
@@ -7,17 +7,17 @@ const ASSETS = [
   '/icons/localpulse-512.svg',
 ];
 
+// Установка: кэшируем только критические статические файлы
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      cache.addAll(ASSETS).catch(() => {
-        console.log('Some assets failed to cache');
-      });
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
+// Активация: чистим старые версии кэша
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -37,31 +37,37 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (url.origin !== location.origin) {
+  // 1. Игнорируем запросы к Supabase и сторонним API
+  if (url.origin !== location.origin || request.method !== 'GET') {
     return;
   }
 
-  if (request.method !== 'GET') {
-    return;
-  }
-
+  // 2. Стратегия для HTML и ресурсов (Network First)
+  // Пытаемся взять свежее из сети, если нет связи — отдаем кэш
   event.respondWith(
-    caches.match(request).then(response => {
-      if (response) return response;
-      return fetch(request)
-        .then(response => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
+    fetch(request)
+      .then(response => {
+        // Если ответ ок, сохраняем/обновляем его в кэше
+        if (response.status === 200 && response.type === 'basic') {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(request, responseToCache);
           });
-          return response;
-        })
-        .catch(() => {
-          return new Response('Offline', { status: 503 });
+        }
+        return response;
+      })
+      .catch(() => {
+        // Если сеть упала, ищем в кэше
+        return caches.match(request).then(cachedResponse => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Если и в кэше нет, отдаем заглушку для офлайна
+          if (request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          return new Response('Offline content not available', { status: 503 });
         });
-    })
+      })
   );
 });
