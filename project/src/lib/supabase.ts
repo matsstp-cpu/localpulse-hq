@@ -1,9 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Защита от запуска без ключей (причина зависания на скриншоте 17.16.29)
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    'Критическая ошибка: Переменные окружения Supabase не найдены. ' +
+    'Проверь настройки в панели Vercel (Settings -> Environment Variables).'
+  );
+}
+
+export const supabase = createClient(
+  supabaseUrl || '', 
+  supabaseAnonKey || ''
+);
 
 export type Profile = {
   id: string;
