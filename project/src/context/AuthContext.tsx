@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // 1. Получаем начальную сессию при загрузке страницы
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -42,15 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // 2. Слушаем любые изменения: вход (SIGNED_IN), выход (SIGNED_OUT) и т.д.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
-        (async () => { await fetchProfile(session.user.id); })();
+        await fetchProfile(session.user.id);
       } else {
         setProfile(null);
       }
-      if (event === 'INITIAL_SESSION') setLoading(false);
+
+      // ИСПРАВЛЕНИЕ: Гарантируем, что loading станет false после любого события
+      // Это предотвратит "зависание" экрана после нажатия кнопки "Войти"
+      setLoading(false); 
     });
 
     return () => subscription.unsubscribe();
